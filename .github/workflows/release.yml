@@ -1,0 +1,80 @@
+name: Release extension
+
+# Runs when you push a version tag such as v1.2.0, or when you start it by hand
+# from the Actions tab. It checks the extension, builds the zip, attaches it to a
+# GitHub release, and (once the store secrets are set) uploads it to the
+# Chrome Web Store and submits it for review.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      submit_to_store:
+        description: "Upload to the Chrome Web Store and submit for review"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      HAS_STORE_SECRETS: ${{ secrets.CWS_SERVICE_ACCOUNT_KEY != '' && secrets.CWS_PUBLISHER_ID != '' && secrets.CWS_EXTENSION_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from manifest
+        id: version
+        run: |
+          VERSION=$(jq -r .version extension/manifest.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zip=browsing-study-recorder-v$VERSION.zip" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::The tag $GITHUB_REF_NAME does not match manifest version $VERSION. Update manifest.json or retag."
+            exit 1
+          fi
+
+      - name: Check the extension files
+        run: |
+          jq empty extension/manifest.json
+          for f in extension/*.js; do node --check "$f"; done
+
+      - name: Build zip
+        run: |
+          cd extension
+          zip -r "../${{ steps.version.outputs.zip }}" . -x ".*"
+
+      - name: Save zip as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.zip }}
+          path: ${{ steps.version.outputs.zip }}
+
+      - name: Create GitHub release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # If you made the release on the GitHub website, it already exists. Attach the zip to it.
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${{ steps.version.outputs.zip }}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${{ steps.version.outputs.zip }}" --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+
+      - name: Upload to Chrome Web Store and submit for review
+        if: env.HAS_STORE_SECRETS == 'true' && (github.ref_type == 'tag' || inputs.submit_to_store)
+        env:
+          CWS_SERVICE_ACCOUNT_KEY: ${{ secrets.CWS_SERVICE_ACCOUNT_KEY }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          pip install --quiet google-auth requests
+          python .github/scripts/publish_cws.py "${{ steps.version.outputs.zip }}"
+
+      - name: Note when store secrets are missing
+        if: env.HAS_STORE_SECRETS != 'true'
+        run: echo "::notice::Store secrets are not set, so the zip was built but not sent to the Chrome Web Store. Download it from this run or the release and upload it in the dashboard."

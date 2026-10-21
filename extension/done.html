@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Recording finished</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="page">
+  <main>
+    <h1 id="heading">Recording finished</h1>
+    <p id="summary"></p>
+
+    <section id="steps">
+      <h2>Step 1. Download your file</h2>
+      <button id="download">Download my file</button>
+      <p id="saved" class="success" hidden>Saved to your Downloads folder as <code id="filename"></code></p>
+
+      <h2>Step 2. Upload it to the survey</h2>
+      <p id="instructions"></p>
+
+      <h2>Step 3. Remove this extension</h2>
+      <p>Do this after you have uploaded your file. Removing the extension also deletes everything it recorded from your computer.</p>
+      <button id="uninstall" class="secondary">Remove extension now</button>
+      <p class="muted">Chrome will ask you to confirm.</p>
+      <details>
+        <summary>Or remove it yourself</summary>
+        <ol>
+          <li>Click the puzzle piece icon at the top right of Chrome.</li>
+          <li>Find Browsing Study Recorder and click the three dots next to it.</li>
+          <li>Click Remove from Chrome, then Remove.</li>
+        </ol>
+        <p class="muted">You can also go to chrome://extensions, find Browsing Study Recorder, and click Remove.</p>
+      </details>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script src="done.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="popup">
+  <h1>Browsing Study Recorder</h1>
+
+  <section id="idle" hidden>
+    <p>When you click Start, this extension records the web pages you visit, the links you click, and the searches you run. Recording stops when you click Finish.</p>
+    <p>It never reads passwords or form entries. Email and the study survey are not recorded.</p>
+    <p>Your data stays on your computer until you download the file and upload it to the survey.</p>
+    <label for="pid">Your Prolific ID</label>
+    <input id="pid" type="text" autocomplete="off" spellcheck="false" placeholder="Paste your Prolific ID">
+    <p id="pid-warning" class="warning" hidden>That doesn't look like a Prolific ID (24 letters and numbers). Check it and try again.</p>
+    <button id="start">Start recording</button>
+  </section>
+
+  <section id="active" hidden>
+    <p class="big" id="elapsed">0:00</p>
+    <p>Recording. Keep browsing to answer the question in the survey.</p>
+    <p class="muted">Pages visited: <span id="pages">0</span></p>
+    <p class="muted">When the survey tells you to stop, click Finish to get your file.</p>
+    <button id="finish">Finish and get my file</button>
+  </section>
+
+  <section id="complete" hidden>
+    <p class="big">Recording finished</p>
+    <p>Download your file, upload it to the survey, then remove this extension.</p>
+    <button id="open-done">Get my file</button>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
