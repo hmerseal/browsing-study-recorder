@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browsing Study Recorder",
-  "version": "1.3.1",
+  "version": "1.3.3",
   "description": "For research participants. Records the web pages visited and links clicked until you click Finish, then exports a file to upload.",
   "permissions": [
     "storage"

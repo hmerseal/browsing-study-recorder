@@ -63,9 +63,45 @@ def matches_click(click, pv, target):
     return ""
 
 
+def phantom_pageviews(events):
+    """Seq numbers of pages Chrome loaded but the participant never saw.
+
+    Files from extension 1.3.2 or earlier include Chrome's search warm-up page and
+    search results Chrome loaded in the background while a query was being typed.
+    Those show up as search pages that were never visible. Later versions skip them.
+    """
+    drop = set()
+    for i, e in enumerate(events):
+        if e["type"] != "pageview" or e.get("excluded"):
+            continue
+        url = e.get("url") or ""
+        if "google." in (e.get("host") or "") and "/search/warmup.html" in url:
+            drop.add(e["seq"])
+            continue
+        if e.get("site") != "search_engine" or e.get("nav_type") != "navigate":
+            continue
+        for later in events[i + 1:]:
+            if later.get("tab_id") != e.get("tab_id"):
+                continue
+            if later["type"] == "visibility" and later.get("state") == "visible" and later.get("url") == url:
+                break
+            if later["type"] == "page_exit" and later.get("url") == url:
+                if not later.get("visible_ms"):
+                    drop.add(e["seq"])
+                    drop.add(later["seq"])
+                break
+    return drop
+
+
 def process_session(data):
     pid = data.get("prolific_pid", "unknown")
     events = sorted(data["events"], key=lambda e: e["seq"])
+    phantoms = phantom_pageviews(events)
+    last_url = {}        # tab_id -> URL of the page currently open in that tab
+    url_node = {}        # URL -> node name, for matching page_exit events
+    events = [e for e in events if e["seq"] not in phantoms]
+    last_visible = None  # node the participant was most recently looking at, in any tab
+    seen_pageview = False
     last_node = {}       # tab_id -> node currently open in that tab
     last_click = {}      # tab_id -> most recent link_click in that tab
     last_search = {}     # tab_id -> most recent search_submit
@@ -80,16 +116,23 @@ def process_session(data):
             last_click[tab] = e
         elif e["type"] == "search_submit":
             last_search[tab] = e
+        elif e["type"] == "visibility" and e.get("state") == "visible" and tab in last_node:
+            last_visible = last_node[tab]
         elif e["type"] == "page_exit":
-            stats = node_stats[last_node.get(tab) or e.get("article") or e.get("url")]
-            open_since.pop(tab, None)
+            # An exit can arrive after the next page's pageview, so match it by URL.
+            exited = url_node.get(e.get("url")) or last_node.get(tab) or e.get("article") or e.get("url")
+            stats = node_stats[exited]
+            if last_node.get(tab) == exited:
+                open_since.pop(tab, None)
             stats["visible_ms"] += e.get("visible_ms") or 0
             stats["max_scroll"] = max(stats["max_scroll"], e.get("max_scroll_fraction") or 0)
         elif e["type"] == "pageview":
             target = node_name(e)
             stats = node_stats[target]
             stats["site"] = node_site(e)
-            stats["visits"] += 1
+            # A site rewriting its own URL (Wikipedia, Google) or a reload is not a new visit.
+            if not (e.get("nav_type") in ("same_document", "reload") and last_node.get(tab) == target):
+                stats["visits"] += 1
             if stats["first_t_ms"] is None:
                 stats["first_t_ms"] = e["t_ms"]
 
@@ -97,7 +140,17 @@ def process_session(data):
             opener = e.get("opener_tab_id")
             source_tab = opener if new_tab and opener in last_node else tab
             source = last_node.get(source_tab, START)
+            # A tab opened by hand (Ctrl+T) has no opener. Its source is the page
+            # the participant was looking at when they opened it.
+            blank_new_tab = new_tab and source == START and seen_pageview
+            if blank_new_tab:
+                source = last_visible or START
+            seen_pageview = True
+            last_url_prev = last_url.get(source_tab)
             last_node[tab] = target
+            last_url[tab] = e.get("url")
+            url_node[e.get("url")] = target
+            last_visible = target
             open_since[tab] = e["t_ms"]
 
             if e.get("nav_type") == "reload" or source == target:
@@ -120,6 +173,10 @@ def process_session(data):
             }
             if source == START:
                 row["type"] = "session_start"
+            elif e.get("excluded"):
+                row["type"] = "excluded_site"
+            elif blank_new_tab:
+                row["type"] = "new_tab_search" if target.startswith("Search (") else "new_tab"
             elif e.get("nav_type", "").startswith("back_forward"):
                 row["type"] = "back_forward"
             elif matches_click(click, e, target):
@@ -143,6 +200,10 @@ def process_session(data):
                 row["type"] = "search_typed"
             elif e.get("excluded"):
                 row["type"] = "excluded_site"
+            elif e.get("referrer_article") == source or (e.get("referrer") and e.get("referrer") == last_url_prev):
+                # Opened with no click recorded, such as right-click "Open link in new tab".
+                row["type"] = "link"
+                row["click_match"] = "referrer"
             else:
                 row["type"] = "other"
             transitions.append(row)

@@ -155,8 +155,11 @@
     chrome.runtime.sendMessage({ type: "status" }).then((st) => {
       if (st && st.status === "active") describe({ already: "active" });
       else if (st && st.status === "complete") describe({ already: "complete" });
-      else if (button) button.disabled = false;
-    }).catch(() => {});
+      else {
+        if (button) button.disabled = false;
+        setMsg("Extension found. Click Start recording when you're ready.", "");
+      }
+    }).catch(() => setMsg("Something went wrong. Reload this page and try again.", "warn"));
     if (!button) return;
     let warnedPid = null;
     button.addEventListener("click", async () => {
@@ -182,6 +185,20 @@
     send({ type: "pageview", excluded: true, host, nav_type: "excluded" });
     return;
   }
+
+  // Chrome's search warm-up page is never shown to the user.
+  if (/(^|\.)google\.[a-z.]+$/.test(host) && location.pathname === "/search/warmup.html") return;
+
+  // Chrome can load pages in the background before the user opens them (prerendering),
+  // for example search results while a query is still being typed. Those pages are only
+  // recorded if and when the user actually lands on them.
+  if (document.prerendering) {
+    document.addEventListener("prerenderingchange", () => startTracking(true), { once: true });
+  } else {
+    startTracking(false);
+  }
+
+  function startTracking(wasPrerendered) {
 
   // Per-page tracking, reset on back/forward cache restores and same-page navigations.
   let pageStart, maxScroll, visibleMs, visibleSince;
@@ -216,14 +233,15 @@
   }
 
   const navEntry = performance.getEntriesByType("navigation")[0];
-  const navStart = Math.round(performance.timeOrigin);
+  const activationStart = navEntry && navEntry.activationStart ? navEntry.activationStart : 0;
+  const navStart = Math.round(performance.timeOrigin + activationStart);
   resetPageTracking(navStart);
   let current = pageInfo();
   let lastHref = location.href;
   send({
     type: "pageview",
     clientTs: navStart,
-    nav_type: navEntry ? navEntry.type : "unknown",
+    nav_type: wasPrerendered ? "prerender_activated" : (navEntry ? navEntry.type : "unknown"),
     ...referrerInfo(),
     ...current
   });
@@ -418,4 +436,5 @@
     },
     true
   );
+  }
 })();
