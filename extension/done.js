@@ -5,6 +5,11 @@ function buildFile(s) {
   const out = {
     study: s.study,
     prolific_pid: s.pid,
+    pid_looks_valid: s.pidLooksValid,
+    condition: s.condition,
+    start_url: s.startUrl,
+    start_method: s.startMethod,
+    pages_counted: s.pagesCounted ?? null,
     extension_version: s.extensionVersion,
     user_agent: s.userAgent,
     started_at: new Date(s.startedAt).toISOString(),

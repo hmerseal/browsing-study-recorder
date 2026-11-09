@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Start Recording</title>
+<style>
+  :root { --bg:#ffffff; --text:#1f2328; --muted:#59636e; --accent:#1565c0; --accent-text:#ffffff; --border:#d0d7de; --warn:#b3261e; --ok:#2e7d32; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1f23; --text:#e6edf3; --muted:#9198a1; --accent:#64a8f0; --accent-text:#0d1117; --border:#3d444d; --warn:#ff8a80; --ok:#81c784; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:560px; margin:64px auto; padding:0 16px; }
+  h1 { font-size:28px; line-height:1.25; margin:0 0 16px; }
+  label { display:block; font-weight:600; margin:24px 0 6px; }
+  input { width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--text); font:15px ui-monospace,Menlo,monospace; }
+  button { margin-top:20px; padding:12px 18px; border:0; border-radius:6px; background:var(--accent); color:var(--accent-text); font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #start-message { margin-top:20px; min-height:1.5em; }
+  #start-message.ok { color:var(--ok); }
+  #start-message.warn { color:var(--warn); }
+  .muted { color:var(--muted); font-size:15px; }
+  #missing { border:1px solid var(--border); border-radius:8px; padding:16px; margin-top:24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Start recording</h1>
+  <p>Click the button below to start the browsing recorder. Your starting page will open in a new tab.</p>
+
+  <label for="pid">Your Prolific ID</label>
+  <input id="pid" type="text" autocomplete="off" spellcheck="false" placeholder="Paste your Prolific ID">
+  <p class="muted">This should already be filled in. If it's blank, paste your Prolific ID.</p>
+
+  <button id="start-recording" disabled>Start recording</button>
+  <p id="start-message" aria-live="polite">Checking for the extension...</p>
+
+  <div id="missing" hidden>
+    <p><strong>The extension isn't installed in this browser.</strong></p>
+    <p>Install it from <a id="store-link" href="#">the Chrome Web Store</a>, then reload this page. Make sure you are using the same browser where you installed it.</p>
+  </div>
+</main>
+<script>
+  // Paste your Chrome Web Store link here.
+  var STORE_LINK = "[STORE LINK]";
+  document.getElementById("store-link").href = STORE_LINK;
+
+  var params = new URLSearchParams(location.search);
+  var pid = (params.get("pid") || "").trim();
+  // Ignore an unfilled survey placeholder such as ${e://Field/PROLIFIC_PID}.
+  if (pid && pid.indexOf("${") === -1 && pid.indexOf("{{") === -1) {
+    document.getElementById("pid").value = pid;
+  }
+
+  setTimeout(function () {
+    if (document.documentElement.dataset.recorderInstalled !== "1") {
+      document.getElementById("start-message").textContent = "";
+      document.getElementById("missing").hidden = false;
+    }
+  }, 2500);
+</script>
+</body>
+</html>

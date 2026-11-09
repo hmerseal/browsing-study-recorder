@@ -18,7 +18,7 @@ During the session it records:
 - Searches you run on search engines and in site search boxes
 - How far you scroll on each page, and how long each page was visible
 - Internal browser tab numbers, so pages opened in new tabs can be linked to the page they came from
-- The Prolific ID you enter, and your browser's version information
+- Your Prolific ID, your study condition, and your browser's version information
 
 To limit what is collected:
 

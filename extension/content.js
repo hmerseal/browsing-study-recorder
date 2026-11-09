@@ -118,6 +118,64 @@
     return { referrer: cleanUrl(r), referrer_article: articleFromUrl(r) };
   }
 
+  // The study's start page on GitHub Pages. The page passes the participant ID and
+  // condition in its URL. This script wires up its Start button. Nothing on it is recorded.
+  function setupStartLink() {
+    let page;
+    try {
+      page = new URL(CONFIG.START_LINK_PAGE);
+    } catch (e) {
+      return;
+    }
+    if (location.origin !== page.origin || location.pathname !== page.pathname) return;
+    const root = document.documentElement;
+    root.dataset.recorderInstalled = "1";
+    const button = document.getElementById("start-recording");
+    const msg = document.getElementById("start-message");
+    const pidInput = document.getElementById("pid");
+    const setMsg = (text, kind) => {
+      if (!msg) return;
+      msg.textContent = text;
+      msg.className = kind || "";
+    };
+    const describe = (st) => {
+      if (st.already === "active") {
+        setMsg("Recording is already running. Go back to the survey.", "ok");
+      } else if (st.already === "complete") {
+        setMsg("You have already finished a recording. Click the extension icon to get your file.", "warn");
+      } else if (st.error === "unknown_condition") {
+        setMsg("This start link is missing its study code. Go back to the survey and click the link again.", "warn");
+      } else if (st.error === "missing_pid") {
+        setMsg("Please paste your Prolific ID above, then click Start recording.", "warn");
+      } else if (st.status === "active") {
+        setMsg("Recording started. Your starting page opened in a new tab. Go back to the survey for the next step.", "ok");
+        if (button) button.disabled = true;
+      }
+    };
+    chrome.runtime.sendMessage({ type: "status" }).then((st) => {
+      if (st && st.status === "active") describe({ already: "active" });
+      else if (st && st.status === "complete") describe({ already: "complete" });
+      else if (button) button.disabled = false;
+    }).catch(() => {});
+    if (!button) return;
+    let warnedPid = null;
+    button.addEventListener("click", async () => {
+      const pid = cleanParticipantId(pidInput ? pidInput.value : "");
+      if (pid && !looksLikeProlificId(pid) && warnedPid !== pid) {
+        warnedPid = pid;
+        setMsg("That doesn't look like a Prolific ID, which is usually 24 letters and numbers. Check it, or click Start recording again to continue anyway.", "warn");
+        return;
+      }
+      const cond = new URLSearchParams(location.search).get("cond");
+      try {
+        describe(await chrome.runtime.sendMessage({ type: "start_link", pid, cond }));
+      } catch (e) {
+        setMsg("Something went wrong. Reload this page and try again.", "warn");
+      }
+    });
+  }
+  setupStartLink();
+
   const host = location.hostname;
   if (isExcluded(host)) {
     // Note that the participant was on an excluded site, and nothing else.

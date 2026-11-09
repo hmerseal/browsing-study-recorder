@@ -17,8 +17,8 @@ Description:
 This extension is for people taking part in a research study run by [YOUR NAME / ORGANIZATION]. Install it only if a study has asked you to.
 
 How it works:
-1. Paste your Prolific ID and click Start.
-2. Browse the web normally to answer the study question.
+1. Click the start link in your study survey. Your starting page opens in a new tab.
+2. Browse the web normally to answer the study question. Visit at least the number of pages the study asks for.
 3. When the survey tells you to stop, click Finish, download your file, and upload it to the survey.
 4. Remove the extension. The completion page has a button that does this for you.
 
@@ -60,4 +60,4 @@ Price: Free
 
 ## Note for the reviewer (Test instructions, if the dashboard offers the field)
 
-Click the toolbar icon, paste any 24-character ID such as 5f8a2c1b9d3e4f5a6b7c8d9e, and click Start. Browse a few pages, then click the icon and choose Finish to see the export and remove steps.
+Click the toolbar icon, open "The start link didn't work", paste any ID such as 5f8a2c1b9d3e4f5a6b7c8d9e, enter the start code hepa, and click Start recording. Visit 5 different pages, then click the icon and choose Finish to see the export and remove steps.
