@@ -54,12 +54,26 @@
     document.getElementById("pid").value = pid;
   }
 
-  setTimeout(function () {
-    if (document.documentElement.dataset.recorderInstalled !== "1") {
-      document.getElementById("start-message").textContent = "";
+  // The extension marks this page when it is installed. Watch for that mark.
+  var CHECKING = "Checking for the extension...";
+  var msg = document.getElementById("start-message");
+  var waited = 0;
+  var check = setInterval(function () {
+    waited += 200;
+    if (document.documentElement.dataset.recorderInstalled === "1") {
+      clearInterval(check);
+      // Give the extension a moment to report a running or finished recording first.
+      setTimeout(function () {
+        if (msg.textContent === CHECKING) {
+          msg.textContent = "Extension found. Click Start recording when you're ready.";
+        }
+      }, 600);
+    } else if (waited >= 2500) {
+      clearInterval(check);
+      msg.textContent = "";
       document.getElementById("missing").hidden = false;
     }
-  }, 2500);
+  }, 200);
 </script>
 </body>
 </html>
